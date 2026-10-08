@@ -1,6 +1,6 @@
 # Project Kickoff Checklist
 
-Complete this before substantial implementation. Mark intentional omissions with a reason; do not fill unknowns with guesses.
+Complete the core product and backend foundation work before substantial implementation. The UI readiness subsection below is required only before user-facing UI work; it does not block backend-only development. Mark intentional omissions with a reason; do not fill unknowns with guesses.
 
 ## Identity and ownership
 

@@ -12,7 +12,7 @@ This repository is a **GitHub template repository**. Create a new repository fro
 4. Verify actual runtime versions and dependencies from manifests/lockfiles; update development, test, and CI commands accordingly.
 5. Backend-only development may proceed without a completed UI palette, font selection, stylesheet architecture, or visual system. Before starting the user-facing UI phase, complete the UI readiness gate in `docs/development/PHASE-GATES.md`.
 6. At that UI gate, choose the UI stack and canonical stylesheet entry point. Adapt `examples/css/design-tokens.css`; do not copy an example palette as an approved brand system without contrast review.
-7. Add local, licensed font files only when the project has selected typefaces. Record their source and license in `docs/ui/FONTS.md` (copy the provided font checklist from `docs/ui/DESIGN-SYSTEM.md`).
+7. Add local, licensed font files only when the project has selected typefaces. Record each font's source and license in `docs/ui/FONTS.md`.
 8. Add a GitHub Actions workflow that runs this project's real formatter, static checks, tests, build, and any required documentation validation. The template intentionally does not claim any stack-specific CI passes.
 9. Update `AGENTS.md`, `CONTRIBUTING.md`, `.github/PULL_REQUEST_TEMPLATE.md`, and docs so their rules and commands match the project.
 
