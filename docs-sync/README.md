@@ -14,7 +14,8 @@ docs-sync/
 ```
 
 See [`ENTRA-SETUP.md`](./ENTRA-SETUP.md) for the administrator runbook that grants
-an app write to **one site only** (the preferred, least-privilege auth).
+a **dedicated** app write to **one site only** (the preferred, least-privilege
+auth).
 
 Each project keeps its own committed config at `.opencode/sharepoint-sync.json`
 and writes to `<rootFolder>/<projectSlug>/<repo-relative-path>` in the configured
@@ -36,9 +37,9 @@ Request the **narrowest** scope that works; never accept a broader one just to
 make a sync succeed. `Sites.FullControl.All` is over-broad for writing
 documentation and must not be relied on or requested.
 
-**App-only `Sites.Selected` (preferred — durable, unattended, narrow).** The
-script authenticates with client credentials when given a tenant, client id, and
-secret:
+**App-only `Sites.Selected` (preferred — durable, unattended, narrow).** Use a
+**dedicated** app registration (do not share a production/integration app — see
+the runbook), with the client credentials the script accepts:
 
 ```powershell
 $env:SHAREPOINT_SYNC_CLIENT_SECRET = <secret>   # from BWS/Key Vault, never committed
@@ -49,9 +50,9 @@ pwsh -File scripts/sync-docs.ps1 -SourceRoot . -TenantId <tenant> -ClientId <app
 Setup (admin actions; see [`ENTRA-SETUP.md`](./ENTRA-SETUP.md); do not perform
 without explicit approval naming the tenant, app, permission, and scope):
 
-1. Create (or reuse) an Entra app registration with the **`Sites.Selected`**
+1. Create a dedicated Entra app registration with the **`Sites.Selected`**
    application permission and grant admin consent.
-2. Grant the app write on the target site only:
+2. Grant that app write on the target site only:
    `POST https://graph.microsoft.com/v1.0/sites/{siteId}/permissions` with
    `{ "roles": ["write"], "grantedToIdentities": [ { "application": { "id": "<clientId>", "displayName": "<name>" } } ] }`
 3. Store the client secret in a secret manager and export it as
