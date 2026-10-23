@@ -1,0 +1,9 @@
+{
+  "projectSlug": "REPLACE_WITH_PROJECT_SLUG",
+  "rootFolder": "Projects",
+  "siteId": "REPLACE_WITH_SHAREPOINT_SITE_ID",
+  "driveId": "REPLACE_WITH_SHAREPOINT_DRIVE_ID",
+  "include": ["**/*.md"],
+  "excludeDirectories": [".git", ".idea", ".vscode", ".agents", ".claude", "node_modules", "vendor", "storage", "reference", "coverage", "dist", "build", "target", ".phpunit.cache", ".venv", "__pycache__"],
+  "excludeFiles": ["AGENTS.md", "CLAUDE.md"]
+}
