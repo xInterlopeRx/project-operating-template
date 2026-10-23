@@ -32,17 +32,33 @@ Request the **narrowest** scope that works; never accept a broader one just to
 make a sync succeed. `Sites.FullControl.All` is over-broad for writing
 documentation and must not be relied on or requested.
 
-**Delegated (interactive)** — request only `Sites.ReadWrite.All`, bounded by the
-signed-in user's own SharePoint membership:
+**App-only `Sites.Selected` (preferred — durable, unattended, narrow).** The
+script authenticates with client credentials when given a tenant, client id, and
+secret:
 
 ```powershell
-Connect-MgGraph -Scopes 'Sites.ReadWrite.All' -UseDeviceCode -ContextScope CurrentUser
+$env:SHAREPOINT_SYNC_CLIENT_SECRET = <secret>   # from BWS/Key Vault, never committed
+pwsh -File scripts/sync-docs.ps1 -SourceRoot . -DryRun -TenantId <tenant> -ClientId <app>
+pwsh -File scripts/sync-docs.ps1 -SourceRoot . -TenantId <tenant> -ClientId <app>
 ```
 
-**App-only (preferred for durability and unattended runs)** — a dedicated Entra
-app with the **`Sites.Selected`** application permission plus an explicit write
-grant on the target site only, authenticating with a certificate or secret
-resolved from a secret manager (never on disk).
+Setup (admin actions; do not perform without explicit approval naming the tenant,
+app, permission, and scope):
+
+1. Create (or reuse) an Entra app registration with the **`Sites.Selected`**
+   application permission and grant admin consent.
+2. Grant the app write on the target site only:
+   `POST https://graph.microsoft.com/v1.0/sites/{siteId}/permissions` with
+   `{ "roles": ["write"], "grantedToIdentities": [ { "application": { "id": "<clientId>", "displayName": "<name>" } } ] }`
+3. Store the client secret in a secret manager and export it as
+   `SHAREPOINT_SYNC_CLIENT_SECRET` at run time.
+
+**Delegated (interactive fallback)** — request only `Sites.ReadWrite.All`, bounded
+by the signed-in user's own SharePoint membership:
+
+```powershell
+Connect-MgGraph -Scopes 'Sites.ReadWrite.All' -ContextScope CurrentUser
+```
 
 Do **not** use the Azure CLI (`az account get-access-token`) as the token source:
 its consented delegated scopes are directory/app-management heavy
@@ -51,12 +67,11 @@ its consented delegated scopes are directory/app-management heavy
 Sites grant at all.
 
 An existing Graph PowerShell consent may return broader scopes than requested
-(incremental consent). If a session reports `Sites.FullControl.All` or other
-wide grants, treat that as the environment's pre-existing consent: prefer the
-app-only `Sites.Selected` path, and have an administrator review and reduce the
-broad consent separately. Never remove or broaden tenant permissions without
-explicit approval naming the tenant, app, permission, and scope. The script warns
-when it detects over-broad scopes.
+(incremental consent). If a session reports `Sites.FullControl.All` or other wide
+grants, treat that as the environment's pre-existing consent: prefer the app-only
+`Sites.Selected` path, and have an administrator review and reduce the broad
+consent separately. Never remove or broaden tenant permissions without explicit
+approval. The script warns when it detects over-broad scopes.
 
 ## Usage
 
