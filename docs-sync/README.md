@@ -64,6 +64,10 @@ without explicit approval naming the tenant, app, permission, and scope):
 2. Grant that app write on the target site only:
    `POST https://graph.microsoft.com/v1.0/sites/{siteId}/permissions` with
    `{ "roles": ["write"], "grantedToIdentities": [ { "application": { "id": "<clientId>", "displayName": "<name>" } } ] }`
+   — this endpoint needs a caller with `Sites.FullControl.All`. The Microsoft
+   Graph Command Line Tools tenant-wide grant had that scope revoked on
+   2026-10-23, so perform the grant from a temporary admin consent (revoke it
+   afterwards) or a dedicated grant app; see the runbook.
 3. Store the client secret in a secret manager and export it as
    `SHAREPOINT_SYNC_CLIENT_SECRET` at run time. With Bitwarden Secrets Manager,
    store it under the same name and run `bws run -- pwsh -File … <sync args>` so

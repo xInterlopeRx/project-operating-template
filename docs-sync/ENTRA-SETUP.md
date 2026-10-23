@@ -62,6 +62,15 @@ Performed by an admin holding full-control delegated access (Graph REST). Repeat
 per additional site you deliberately approve; `Sites.Selected` grants the app
 **no site** by default.
 
+> **Prerequisite — `Sites.FullControl.All` at grant time.** This endpoint needs a
+> caller holding `Sites.FullControl.All` (delegated) or a dedicated app with the
+> application role. The **Microsoft Graph Command Line Tools** tenant-wide
+> delegated grant had `Sites.FullControl.All` **revoked on 2026-10-23**, so:
+> temporarily re-consent it for the CLI (Entra admin), perform the grant, then
+> revoke it again; or perform the grant from a dedicated one-time grant app; or
+> use the site's own app-permission request (`appinv.aspx`) with tenant-admin
+> approval. Do not leave a standing tenant-wide full-control grant in place.
+
 ```
 POST https://graph.microsoft.com/v1.0/sites/<site-id>/permissions
 Content-Type: application/json
@@ -115,11 +124,18 @@ pwsh -File docs-sync/scripts/sync-docs.ps1 -SourceRoot . -TenantId <tenant-id> -
 
 - Confirm the sync writes only under `<rootFolder>/<projectSlug>/` and nothing
   outside the granted site.
-- Review and reduce over-broad consent separately: e.g. a Microsoft Graph Command
-  Line Tools delegated grant `Sites.FullControl.All` (and unrelated
-  directory/app-management grants such as `Application.ReadWrite.All`). Removing
-  consent is an Entra admin action; do not broaden or revoke without explicit
-  approval naming the tenant, app, permission, and scope.
+- Review and reduce over-broad consent separately. **Done 2026-10-23:** the
+  Microsoft Graph Command Line Tools tenant-wide (`AllPrincipals`) delegated grant
+  had `Sites.FullControl.All` revoked — its scope set dropped from 14 to 13
+  scopes. The remaining scopes (`Application.ReadWrite.All`,
+  `AppRoleAssignment.ReadWrite.All`, `Sites.ReadWrite.All`, `Directory.Read.All`,
+  liveMail-style `Files.Read`, …) still permit broad admin work and can be
+  narrowed further once those workflows move to dedicated apps. Removing consent
+  is an Entra admin action; do not broaden or revoke without explicit approval
+  naming the tenant, app, permission, and scope.
+- Microsoft first-party consents (e.g. *SharePoint Online Web Client
+  Extensibility*, appId `08e18876-6177-487e-b8b5-cf950c1e598c`) legitimately carry
+  `Sites.FullControl.All` as SharePoint baseline; they are not ours to trim.
 
 ## Notes
 
