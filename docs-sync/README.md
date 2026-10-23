@@ -10,7 +10,11 @@ publish docs without colliding.
 docs-sync/
   scripts/sync-docs.ps1          # portable sync
   sharepoint-sync.example.json   # per-project config template
+  ENTRA-SETUP.md                 # admin runbook: app-only Sites.Selected setup
 ```
+
+See [`ENTRA-SETUP.md`](./ENTRA-SETUP.md) for the administrator runbook that grants
+an app write to **one site only** (the preferred, least-privilege auth).
 
 Each project keeps its own committed config at `.opencode/sharepoint-sync.json`
 and writes to `<rootFolder>/<projectSlug>/<repo-relative-path>` in the configured
@@ -42,8 +46,8 @@ pwsh -File scripts/sync-docs.ps1 -SourceRoot . -DryRun -TenantId <tenant> -Clien
 pwsh -File scripts/sync-docs.ps1 -SourceRoot . -TenantId <tenant> -ClientId <app>
 ```
 
-Setup (admin actions; do not perform without explicit approval naming the tenant,
-app, permission, and scope):
+Setup (admin actions; see [`ENTRA-SETUP.md`](./ENTRA-SETUP.md); do not perform
+without explicit approval naming the tenant, app, permission, and scope):
 
 1. Create (or reuse) an Entra app registration with the **`Sites.Selected`**
    application permission and grant admin consent.
