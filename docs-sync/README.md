@@ -1,14 +1,14 @@
 # SharePoint Docs Sync
 
 Sync a repository's eligible Markdown to a per-project folder in SharePoint via
-Microsoft Graph (delegated). One folder per project at a shared target, so many
-projects publish docs without colliding.
+Microsoft Graph. One folder per project at a shared target, so many projects
+publish docs without colliding.
 
 ## Layout
 
 ```
 docs-sync/
-  scripts/sync-docs.ps1          # portable sync (delegated Graph)
+  scripts/sync-docs.ps1          # portable sync
   sharepoint-sync.example.json   # per-project config template
 ```
 
@@ -26,15 +26,37 @@ drive. Result:
       README.md
 ```
 
-## Auth (delegated)
+## Auth and least privilege
+
+Request the **narrowest** scope that works; never accept a broader one just to
+make a sync succeed. `Sites.FullControl.All` is over-broad for writing
+documentation and must not be relied on or requested.
+
+**Delegated (interactive)** — request only `Sites.ReadWrite.All`, bounded by the
+signed-in user's own SharePoint membership:
 
 ```powershell
 Connect-MgGraph -Scopes 'Sites.ReadWrite.All' -UseDeviceCode -ContextScope CurrentUser
 ```
 
-`-ContextScope CurrentUser` persists the session so later processes reuse it
-silently. Writes are performed as the signed-in user, so that user must be able
-to write to the target library.
+**App-only (preferred for durability and unattended runs)** — a dedicated Entra
+app with the **`Sites.Selected`** application permission plus an explicit write
+grant on the target site only, authenticating with a certificate or secret
+resolved from a secret manager (never on disk).
+
+Do **not** use the Azure CLI (`az account get-access-token`) as the token source:
+its consented delegated scopes are directory/app-management heavy
+(`Application.ReadWrite.All`, `AppRoleAssignment.ReadWrite.All`,
+`Directory.AccessAsUser.All`, `User.ReadWrite.All`, …) and it does not model the
+Sites grant at all.
+
+An existing Graph PowerShell consent may return broader scopes than requested
+(incremental consent). If a session reports `Sites.FullControl.All` or other
+wide grants, treat that as the environment's pre-existing consent: prefer the
+app-only `Sites.Selected` path, and have an administrator review and reduce the
+broad consent separately. Never remove or broaden tenant permissions without
+explicit approval naming the tenant, app, permission, and scope. The script warns
+when it detects over-broad scopes.
 
 ## Usage
 

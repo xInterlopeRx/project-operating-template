@@ -65,6 +65,12 @@ if (-not (Get-MgContext)) {
   Fail "No Graph session. Run: Connect-MgGraph -Scopes 'Sites.ReadWrite.All' -UseDeviceCode -ContextScope CurrentUser, then re-run."
 }
 
+# Least privilege: warn (do not fail) if the session carries over-broad grants.
+$broad = (Get-MgContext).Scopes | Where-Object { $_ -in @('Sites.FullControl.All') }
+if ($broad) {
+  Write-Warning ("Graph session carries over-broad scope(s): " + ($broad -join ', ') + ". Prefer Sites.ReadWrite.All (delegated) or an app-only Sites.Selected grant; do not rely on full-control consent.")
+}
+
 # --- enumerate eligible files ------------------------------------------------
 $absoluteRoot = (Resolve-Path $SourceRoot).Path
 $files = Get-ChildItem -Path $absoluteRoot -Recurse -File -Include '*.md' | Where-Object {
