@@ -47,6 +47,15 @@ pwsh -File scripts/sync-docs.ps1 -SourceRoot . -DryRun -TenantId <tenant> -Clien
 pwsh -File scripts/sync-docs.ps1 -SourceRoot . -TenantId <tenant> -ClientId <app>
 ```
 
+If the secret lives in **Bitwarden Secrets Manager** under the matching name
+`SHAREPOINT_SYNC_CLIENT_SECRET`, let the CLI inject it so the value never touches
+disk or shell history (the secret name matches the variable the script reads):
+
+```bash
+BWS_ACCESS_TOKEN=<machine-account-token> bws run -- \
+  pwsh -File scripts/sync-docs.ps1 -SourceRoot . -TenantId <tenant> -ClientId <app>
+```
+
 Setup (admin actions; see [`ENTRA-SETUP.md`](./ENTRA-SETUP.md); do not perform
 without explicit approval naming the tenant, app, permission, and scope):
 
@@ -56,7 +65,9 @@ without explicit approval naming the tenant, app, permission, and scope):
    `POST https://graph.microsoft.com/v1.0/sites/{siteId}/permissions` with
    `{ "roles": ["write"], "grantedToIdentities": [ { "application": { "id": "<clientId>", "displayName": "<name>" } } ] }`
 3. Store the client secret in a secret manager and export it as
-   `SHAREPOINT_SYNC_CLIENT_SECRET` at run time.
+   `SHAREPOINT_SYNC_CLIENT_SECRET` at run time. With Bitwarden Secrets Manager,
+   store it under the same name and run `bws run -- pwsh -File … <sync args>` so
+   the value is injected without touching disk or shell history.
 
 **Delegated (interactive fallback)** — request only `Sites.ReadWrite.All`, bounded
 by the signed-in user's own SharePoint membership:
