@@ -128,15 +128,63 @@ function Invoke-Graph {
 
 # --- enumerate eligible files ------------------------------------------------
 $absoluteRoot = (Resolve-Path $SourceRoot).Path
-$files = Get-ChildItem -Path $absoluteRoot -Recurse -File -Include '*.md' | Where-Object {
+$includes = if ($config.include) { @($config.include) } else { @('**/*.md') }
+
+# Segment-wise glob matcher: '*' and '?' match inside a segment, '**' matches
+# across directories (so '**/*.md' also matches a file at the repository root).
+function Test-GlobMatch([string]$relativePath, [string]$pattern) {
+  $pathParts = @((($relativePath -replace '\\','/') -split '/') | Where-Object { $_ -ne '' })
+  $patParts  = @((($pattern -replace '\\','/') -split '/') | Where-Object { $_ -ne '' })
+  $pi = 0; $si = 0; $starPi = -1; $starSi = -1
+  while ($si -lt $pathParts.Count) {
+    if ($pi -lt $patParts.Count -and ($patParts[$pi] -eq '**' -or $pathParts[$si] -like $patParts[$pi])) {
+      if ($patParts[$pi] -eq '**') { $starPi = $pi; $starSi = $si; $pi++ } else { $pi++; $si++ }
+    } elseif ($starPi -ge 0) { $starSi++; $si = $starSi; $pi = $starPi + 1 }
+    else { return $false }
+  }
+  while ($pi -lt $patParts.Count -and $patParts[$pi] -eq '**') { $pi++ }
+  return ($pi -eq $patParts.Count)
+}
+
+# Content type per extension: a Markdown type on a binary file is wrong.
+function Get-ContentTypeForName([string]$name) {
+  switch ([System.IO.Path]::GetExtension($name).ToLowerInvariant()) {
+    '.md'   { 'text/markdown' }
+    '.txt'  { 'text/plain' }
+    '.csv'  { 'text/csv' }
+    '.json' { 'application/json' }
+    '.xlsx' { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }
+    '.xls'  { 'application/vnd.ms-excel' }
+    '.pdf'  { 'application/pdf' }
+    '.png'  { 'image/png' }
+    '.jpg'  { 'image/jpeg' }
+    '.jpeg' { 'image/jpeg' }
+    '.gif'  { 'image/gif' }
+    '.svg'  { 'image/svg+xml' }
+    '.zip'  { 'application/zip' }
+    default { 'application/octet-stream' }
+  }
+}
+
+# Hard safety rule, deliberately not configurable: never upload dotfiles or
+# secret/editor artefacts even when an include pattern asks for them.
+$neverSyncNamePatterns = @('.env', '.env.*', '*.swp', '*.swo', '*.pem', '*.key', '*.pfx', '*.p12', '*:Zone.Identifier')
+
+$files = Get-ChildItem -Path $absoluteRoot -Recurse -File | Where-Object {
   $rel = $_.FullName.Substring($absoluteRoot.Length).TrimStart('\','/')
-  $segments = $rel -split '[\\/]'
+  $relPosix = $rel -replace '\\','/'
+  $name = $_.Name
+  $segments = $relPosix -split '/'
+
   $dirOk = -not ($segments[0..([Math]::Max($segments.Count - 2, 0))] | Where-Object { $excludeDirs -contains $_ })
-  $fileOk = -not ($excludeFiles -contains $segments[-1])
-  $dirOk -and $fileOk
+  $fileOk = -not ($excludeFiles -contains $name)
+  $included = @($includes | Where-Object { Test-GlobMatch -relativePath $relPosix -pattern $_ }).Count -gt 0
+  $nameIsSafe = @($neverSyncNamePatterns | Where-Object { $name -like $_ }).Count -eq 0
+
+  $dirOk -and $fileOk -and $included -and $nameIsSafe
 } | Sort-Object FullName
 
-if (-not $files) { Write-Output "No eligible Markdown found under $absoluteRoot"; exit 0 }
+if (-not $files) { Write-Output "No eligible files found under $absoluteRoot"; exit 0 }
 
 $projectRoot = ($rootFolder + '/' + $slug)
 
@@ -188,7 +236,7 @@ foreach ($file in $files) {
   if ($status -eq 'uploaded' -and -not $DryRun) {
     Ensure-Folder -relativeFolder ($remotePath -replace '/[^/]+$','')
     $content = [System.IO.File]::ReadAllBytes($file.FullName)
-    $uploaded = Invoke-Graph -Method PUT -Uri ('https://graph.microsoft.com/v1.0/drives/' + $driveId + '/root:/' + $remotePath + ':/content') -Body $content -ContentType 'text/markdown'
+    $uploaded = Invoke-Graph -Method PUT -Uri ('https://graph.microsoft.com/v1.0/drives/' + $driveId + '/root:/' + $remotePath + ':/content') -Body $content -ContentType (Get-ContentTypeForName $file.Name)
     $webUrl = $uploaded.webUrl
   }
 

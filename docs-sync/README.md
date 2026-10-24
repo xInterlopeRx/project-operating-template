@@ -1,8 +1,9 @@
 # SharePoint Docs Sync
 
-Sync a repository's eligible Markdown to a per-project folder in SharePoint via
-Microsoft Graph. One folder per project at a shared target, so many projects
-publish docs without colliding.
+Sync a repository's eligible Markdown — and, when a project opts in, its data
+documents — to a per-project folder in SharePoint via Microsoft Graph. One
+folder per project at a shared target, so many projects publish docs without
+colliding.
 
 ## Layout
 
@@ -121,6 +122,18 @@ files.
 }
 ```
 
+`include` takes globs (`**` spans directories; `*` and `?` match inside a path
+segment) and defaults to Markdown only. To publish non-Markdown project files —
+for example generated data documents under `reference/` — add their patterns
+**and** remove `reference` from `excludeDirectories`:
+
+```json
+"include": ["**/*.md", "reference/**/*.xlsx", "reference/**/*.csv", "reference/**/*.pdf"],
+"excludeDirectories": [".git", ".idea", ".vscode", ".agents", ".claude", "node_modules", "vendor", "storage", "coverage", "dist", "build", "target", ".phpunit.cache", ".venv", "__pycache__"],
+```
+
+Uploaded files use a MIME type derived from their extension.
+
 The project folder is created on first sync. The config holds only non-secret
 identifiers; never commit tokens, client secrets, or key material.
 
@@ -129,8 +142,13 @@ identifiers; never commit tokens, client secrets, or key material.
 - Dry-run first; apply only with explicit authorization for the remote writes.
 - Keep one folder per project; never write into another project's folder.
 - Do not broaden permissions to make a sync succeed.
-- Eligibility excludes VCS/dependency/build directories, `reference/`, and
-  agent-only docs (`AGENTS.md`, `CLAUDE.md`, `.agents/**`, `.claude/**`).
+- Eligibility excludes VCS/dependency/build directories and agent-only docs
+  (`AGENTS.md`, `CLAUDE.md`, `.agents/**`, `.claude/**`). `reference/` is excluded
+  by default; opt into it deliberately (see the config above) before publishing
+  data documents.
+- Never upload secrets or editor artefacts. Regardless of `include`, the script
+  refuses dotfiles and `.env*`, `*.swp`, `*.swo`, `*.pem`, `*.key`, `*.pfx`,
+  `*.p12`, and `*:Zone.Identifier`.
 - Files are skipped when remote size and modified time already match local
   (SharePoint exposes `quickXorHash`; this portable script compares size/mtime
   instead and uses `-Force` to override).
